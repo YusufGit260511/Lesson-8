@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Avtomobillar Grafiklari</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #dbeafe;
+            margin: 20px;
+        }
+        section {
+            margin-bottom: 40px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        canvas {
+            max-width: 100%;
+            width: 800px;
+            height: 400px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Avtomobillar Grafiklari (8 ta)</h1>
+
+<section><h2>1. Tezlik (Bar)</h2><canvas id="grafik1"></canvas></section>
+<section><h2>2. Narx (Line)</h2><canvas id="grafik2"></canvas></section>
+<section><h2>3. Xususiyatlar (Radar)</h2><canvas id="grafik3"></canvas></section>
+<section><h2>4. Ekologik Standartlar (Doughnut)</h2><canvas id="grafik4"></canvas></section>
+<section><h2>5. O‘rindiqlar (Pie)</h2><canvas id="grafik5"></canvas></section>
+<section><h2>6. Yukxona Hajmi (Polar)</h2><canvas id="grafik6"></canvas></section>
+<section><h2>7. Og‘irlik (Gorizontal Bar)</h2><canvas id="grafik7"></canvas></section>
+<section><h2>8. Tejamkorlik (Yuza Grafik)</h2><canvas id="grafik8"></canvas></section>
+
+<script>
+    async function avtomobilMalumotlariniYuklash() {
+        const javob = await fetch('https://run.mocky.io/v3/1a32a709-3fc7-4996-899d-a8aee4121772');
+        return await javob.json();
+    }
+
+    function pastelRang(i) {
+        const ranglar = ['#fbcfe8', '#a5f3fc', '#fde68a', '#c4b5fd', '#bbf7d0', '#fcd34d', '#e0f2fe', '#fecaca'];
+        return ranglar[i % ranglar.length];
+    }
+
+    function grafikChizish(canvas, turi, yorliqlar, malumotlar, nomi, sozlamalar = {}) {
+        new Chart(canvas, {
+            type: turi,
+            data: {
+                labels: yorliqlar,
+                datasets: [{
+                    label: nomi,
+                    data: malumotlar,
+                    backgroundColor: yorliqlar.map((_, i) => pastelRang(i)),
+                    borderColor: '#6366f1',
+                    borderWidth: 1,
+                    fill: turi === 'line' ? true : false,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    title: { display: false }
+                },
+                ...sozlamalar
+            }
+        });
+    }
+
+    avtomobilMalumotlariniYuklash().then(avtomobillar => {
+        const nomlar = avtomobillar.map(a => a.name);
+
+        grafikChizish(document.getElementById('grafik1'), 'bar', nomlar, avtomobillar.map(a => a.speed), 'Tezlik (km/s)');
+        grafikChizish(document.getElementById('grafik2'), 'line', nomlar, avtomobillar.map(a => a.price), 'Narx ($)');
+
+        new Chart(document.getElementById('grafik3'), {
+            type: 'radar',
+            data: {
+                labels: ['Tezlik', 'Yoqilg‘i', 'Quvvat', 'Og‘irlik'],
+                datasets: avtomobillar.map((a, i) => ({
+                    label: a.name,
+                    data: [a.speed, a.fuel, a.power, a.weight],
+                    backgroundColor: pastelRang(i) + '88',
+                    borderColor: pastelRang(i)
+                }))
+            }
+        });
+
+        const ekologikTurlar = {};
+        avtomobillar.forEach(a => {
+            ekologikTurlar[a.eco] = (ekologikTurlar[a.eco] || 0) + 1;
+        });
+
+        grafikChizish(
+            document.getElementById('grafik4'),
+            'doughnut',
+            Object.keys(ekologikTurlar),
+            Object.values(ekologikTurlar),
+            'Ekologik'
+        );
+
+
+        grafikChizish(document.getElementById('grafik5'), 'pie', nomlar, avtomobillar.map(a => a.seats), 'O‘rindiqlar');
+        grafikChizish(document.getElementById('grafik6'), 'polarArea', nomlar, avtomobillar.map(a => a.trunk), 'Yukxona');
+
+        grafikChizish(
+            document.getElementById('grafik7'),
+            'bar',
+            nomlar,
+            avtomobillar.map(a => a.weight),
+            'Og‘irlik (kg)',
+            { indexAxis: 'y' }
+        );
+
+        grafikChizish(
+            document.getElementById('grafik8'),
+            'line',
+            nomlar,
+            avtomobillar.map(a => a.fuel > 0 ? a.speed / a.fuel : 0),
+            'Tejamkorlik (km/l)',
+            { fill: true, tension: 0.4 }
+        );
+    });
+</script>
+
+</body>
+</html>
